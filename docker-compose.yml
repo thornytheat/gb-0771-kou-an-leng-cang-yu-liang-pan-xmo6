@@ -1,0 +1,11 @@
+name: ice-stock
+services:
+  app:
+    build: .
+    ports: ["18470:8000"]
+    environment:
+      ICE_STOCK_DB: /cold-store/receipts.sqlite3
+    volumes:
+      - receipts:/cold-store
+volumes:
+  receipts:

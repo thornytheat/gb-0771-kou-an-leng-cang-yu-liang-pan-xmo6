@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>口岸冷藏余量盘</title>
+<link rel="stylesheet" href="{{ url_for('static',filename='theme.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='floor.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='timeline.css') }}">
+<script type="module" src="{{ url_for('static',filename='shift.js') }}"></script></head><body data-view="{{ view }}">
+<div class="floor"><nav aria-label="冷库作业"><a class="dock-mark" href="/"><span aria-hidden="true">▥</span><div><b>冷链监管库</b><small>PORT COLD STORAGE</small></div></a>
+<div class="rails">{% for key,label in tabs.items() %}<a href="{{ url_for('board.page',view=key,receipt=stamp.id if stamp else none,sample=sample) }}" {% if key==view %}aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</div><div class="watch"><i></i><span>监管库 · UTC</span></div></nav>
+<div class="hall"><header><div><span class="header-id">{{ utc(stages.window.start)[:10] }} / {{ stamp.id[:10] if stamp else '样例预览' }}</span><h1>口岸冷藏余量盘</h1></div><form id="docket"><label for="dataset">查验原件</label><select id="dataset"><option value="dirty" {{ 'selected' if sample=='dirty' }}>港区临检 · 脏样例</option><option value="clean" {{ 'selected' if sample=='clean' }}>常规入库 · 净样例</option></select><button id="file-receipt">归档复算</button></form></header>
+<main><section class="panel inventory"><div class="inventory-title"><h2>收盘余量</h2><small>{{ utc(stages.window.end)[11:19] }} UTC</small></div><div class="kpis">
+{% for key,label in [('available','槽位总量'),('occupied','普通占用'),('frozen','查验冻结'),('free','空余')] %}<div><span>{{ label }}</span><strong>{{ stages.capacity.counts[key] }}<small> 件</small></strong></div>{% endfor %}
+</div></section>
+<div class="bay"><section class="panel work-area">{% if view in ('exposure','custody') %}{% include 'lanes.html' %}{% else %}{% include 'records.html' %}{% endif %}</section>
+<aside class="panel inspection" id="inspection" aria-live="polite"><span class="aside-label">抽查明细</span><h2 id="lot-title">{{ tracks[0].lot if tracks else '货批' }}</h2><p id="lot-desc">{{ tracks[0].description if tracks else '无在库时段' }}</p>
+<div id="lot-summaries">{% for row in stages.capacity.lot_seconds %}<div class="lot-summary" data-summary="{{ row.lot }}" {{ 'hidden' if not loop.first }}><div class="tally"><span>在库</span><b>{{ minutes(row.attended) }} 分</b></div>
+{% for key,label in kinds.items() %}<div class="tally"><span>{{ label }}</span><b>{{ minutes(row.get(key,0)) }} 分</b></div>{% endfor %}</div>{% endfor %}</div></aside>
+</div></main><footer><span>{{ stamp.version if stamp else 'ICE-STOCK / 1' }}</span><span id="status" role="status">{{ '件数已对平' if stages.capacity.balanced else '余量存在差异' }}</span><time>{{ stamp.generated_at[:19] ~ ' UTC' if stamp else '离线值班' }}</time></footer></div></div></body></html>

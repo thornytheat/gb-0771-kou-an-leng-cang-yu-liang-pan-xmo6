@@ -1,0 +1,19 @@
+<div class="bar-head"><h2>{{ tabs[view] }}</h2>
+{% if view=='history' and stamp %}<button id="refresh" data-id="{{ stamp.id }}">复算原件</button>{% endif %}
+{% if view=='certificate' and stamp %}<a class="file" href="{{ url_for('certificate.export',key=stamp.id) }}">下载整组证据</a>{% endif %}</div>
+<div class="scroll"><table>
+{% if view=='intake' %}<thead><tr><th>来源</th><th>物理行</th><th>状态</th><th>原值</th></tr></thead><tbody>
+{% for row in stages.intake.isolated + stages.intake.copies + stages.intake.tables.moves + stages.intake.tables.doors + stages.intake.tables.temperatures %}<tr><td>{{ row.source }}</td><td class="num">{{ row.line }}</td><td>{{ codes.get(row.code,'已采信') }}</td><td title="{{ row.raw|join(' / ') }}"><div class="clip">{{ row.raw|join(' / ') }}</div></td></tr>{% endfor %}</tbody>
+{% elif view=='registry' %}<thead><tr><th>槽位</th><th>版本</th><th>门区</th><th>容量 件</th><th>有效窗 UTC</th><th>原行</th></tr></thead><tbody>
+{% for name, rows in stages.registry.versions.items() %}{% for row in rows %}<tr><td>{{ name }}</td><td>{{ row.revision }}</td><td>{{ row.door }}</td><td class="num">{{ row.capacity }}</td><td>{{ utc(row.start)[11:19] }}–{{ utc(row.end)[11:19] }}</td><td>{{ row.line }}</td></tr>{% endfor %}{% endfor %}</tbody>
+{% elif view=='capacity' %}<thead><tr><th>槽位</th><th>门区</th><th>占用 件</th><th>冻结 件</th><th>空余 件</th><th>超容 件</th><th>在库货批</th></tr></thead><tbody>
+{% for row in stages.capacity.rows %}<tr><td>{{ row.slot }}</td><td>{{ row.door }}</td><td class="num">{{ row.occupied }}</td><td class="num">{{ row.frozen }}</td><td class="num">{{ row.free }}</td><td class="num">{{ row.excess }}</td><td>{{ row.lots|map(attribute='lot')|join(' / ') or '—' }}</td></tr>{% endfor %}</tbody>
+{% elif view=='history' %}<thead><tr><th>归档编号</th><th>校验规则</th><th>生成 UTC</th><th>用时 μs</th></tr></thead><tbody>
+{% for entry in entries %}<tr><td><a title="{{ entry.id }}" href="{{ url_for('board.page',view='history',receipt=entry.id,sample=sample) }}">{{ entry.id[:14] }}</a></td><td>{{ entry.version }}</td><td>{{ entry.generated_at[:19] }}</td><td class="num">{{ entry.elapsed_us }}</td></tr>{% endfor %}</tbody>
+{% elif view=='certificate' %}<thead><tr><th>原件</th><th>摘要</th></tr></thead><tbody>{% if stamp %}{% for source,hash in stamp.inputs.items() %}<tr><td>{{ source }}</td><td title="{{ hash }}">{{ hash[:28] }}</td></tr>{% endfor %}{% endif %}</tbody>{% endif %}
+</table></div>
+{% if view=='capacity' %}<p class="desk-note">{{ '件数守恒' if stages.capacity.balanced else '余量差异' }} · 未定位 {{ stages.capacity.counts.unplaced }} 件 · 时间差 {{ stages.capacity.time_difference }} 秒</p>
+{% for row in stages.capacity.unplaced %}<p class="desk-note">{{ row.lot }} · {{ row.slot }} · {{ row.pieces }} 件 · {{ codes[row.code] }}</p>{% endfor %}
+{% elif view=='registry' %}{% for row in stages.registry.isolated %}<p class="desk-note">{{ row.slot }} · {{ codes[row.code] }} · {{ row.lines|join(',') }}</p>{% endfor %}
+{% elif view=='history' and not entries %}<p class="desk-note">先归档本班原件。</p>
+{% elif view=='certificate' %}<p class="desk-note">{{ '证据摘要已核验' if stamp else '先归档再签发。' }}</p>{% endif %}

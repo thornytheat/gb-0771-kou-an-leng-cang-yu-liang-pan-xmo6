@@ -1,0 +1,14 @@
+<div class="bar-head"><h2>{{ '门区暴露时长' if view=='exposure' else '查验调位回放' }}</h2><span>UTC · {{ minutes(stages.window.end-stages.window.start) }} 分钟</span></div>
+<div class="swim-scroll"><div class="swim" aria-label="货批事件泳道"><div class="ruler"><span>货批</span><div>{% for tick in ticks %}<time style="--pos:{{ tick.left }}%">{{ tick.label[:5] }}</time>{% endfor %}</div></div>
+{% for track in tracks %}<div class="lane"><button type="button" data-lot="{{ track.lot }}" data-description="{{ track.description }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">{{ track.lot }}</button><div class="lane-track">
+{% for block in track.blocks %}<span class="block {{ block.kind }}" style="--pos:{{ block.rel }}%;--length:{{ block.width }}%" title="{{ kinds[block.kind] }} · {{ block.slot }} · {{ utc(block.start)[11:19] }}–{{ utc(block.end)[11:19] }} · 原行 {{ block.source_line }}"></span>{% endfor %}
+{% for event in track.markers %}<span class="marker{{ ' late' if event.late }}" style="--pos:{{ event.point }}%" title="{{ event.kind }} · {{ utc(event.time)[11:19] }} · 原行 {{ event.line }}{{ ' · 迟补' if event.late }}"></span>{% endfor %}
+</div></div>{% else %}<p class="empty">窗口内无在库记录。</p>{% endfor %}</div></div>
+<div class="legend">{% for key,label in kinds.items() %}<span><i class="{{ key }}"></i>{{ label }}</span>{% endfor %}</div>
+{% if view=='exposure' %}<div class="incident"><b>隔离证据</b>{% for row in stages.exposure.isolated %}<span title="{{ row.code }}">{{ codes[row.code] }} · {{ row.door }} · {{ row.lines|join(',') if row.lines else row.line }}</span>{% else %}<span>无隔离记录</span>{% endfor %}</div>{% endif %}
+<div class="scroll detail-table"><table><thead>{% if view=='custody' %}<tr><th>原行</th><th>货批</th><th>生效 UTC</th><th>动作/隔离</th><th>槽位</th><th>查验单</th></tr>{% else %}<tr><th>货批</th><th>槽位</th><th>起止 UTC</th><th>判定</th><th>秒</th><th>来源行</th></tr>{% endif %}</thead><tbody>
+{% if view=='custody' %}
+{% for row in stages.custody.rows + stages.custody.isolated %}{% if not row.code or row.after is undefined %}<tr data-detail="{{ row.lot }}"><td>{{ row.line }}</td><td>{{ row.lot }}</td><td>{{ utc(row.time)[11:19] }}</td><td>{{ codes.get(row.code,row.kind) }}{{ ' · 迟补' if row.late else '' }}</td><td>{{ row.after.slot if row.after else row.slot or '—' }}</td><td>{{ row.after.ticket or row.ticket or '—' if row.after else row.ticket or '—' }}</td></tr>{% endif %}{% endfor %}
+{% else %}
+{% for row in stages.exposure.rows|sort(attribute='start') %}<tr data-detail="{{ row.lot }}"><td>{{ row.lot }}</td><td>{{ row.slot }}</td><td>{{ utc(row.start)[11:19] }}–{{ utc(row.end)[11:19] }}</td><td>{{ kinds[row.kind] }}</td><td class="num">{{ row.seconds }}</td><td>{{ row.source_line }} / {{ row.slot_line or '—' }} / {{ row.door_lines|join(',') or '—' }} / {{ row.temperature_lines|join(',') or '—' }}</td></tr>{% endfor %}
+{% endif %}</tbody></table></div>
