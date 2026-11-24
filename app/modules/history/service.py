@@ -22,4 +22,6 @@ def save(archive, files):
 
 def brief(document):
     stamp, stages = document['manifest'], document['stages']
-    return dict(id=stamp['id'], manifest=stamp, capacity=stages['capacity']['counts'], exposure=stages['exposure']['counts'])
+    return dict(id=stamp['id'], manifest=stamp, capacity=stages['capacity']['counts'],
+                exposure=stages['exposure']['counts'], splits=stages['capacity']['split_totals'],
+                pieces=stages['capacity']['pieces'])

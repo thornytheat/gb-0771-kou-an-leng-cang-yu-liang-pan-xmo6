@@ -8,7 +8,7 @@
 | M2 货批与槽位版本 | 核对容量和门区生效窗 | `/view/registry` `/api/observe/registry` | `app/modules/registry/service.py` `app/modules/registry/versions.py` | `tests/test_registry.py` |
 | M3 查验占位回放 | 逐批回看入出库、调位及冻结 | `/view/custody` `/api/observe/custody` | `app/modules/custody/service.py` `app/modules/custody/transitions.py` | `tests/test_custody.py` |
 | M4 暴露分钟归属 | 按货批核查开门温度及缺证 | `/` `/api/observe/exposure` | `app/modules/exposure/service.py` `app/modules/exposure/doors.py` | `tests/test_exposure.py` |
-| M5 件数和占位对账 | 核对时间与收盘库存守恒 | `/view/capacity` `/api/observe/capacity` | `app/modules/capacity/service.py` | `tests/test_capacity.py` |
+| M5 件数和占位对账 | 核对时间、件数与收盘库存守恒 | `/view/capacity` `/api/observe/capacity` | `app/modules/capacity/service.py` `app/modules/capacity/ledger.py` | `tests/test_capacity.py` `tests/test_split.py` |
 | M6 批次留档复跑 | 归档原件并复算 | `/view/history` `POST /api/receipts` | `app/modules/history/service.py` `app/modules/history/storage.py` | `tests/test_history.py` |
 | M7 冷库证据签发 | 校验摘要并下载原件及依据 | `/view/certificate` `/api/certificate/<key>/export` | `app/modules/certificate/service.py` | `tests/test_certificate.py` |
 
@@ -25,7 +25,11 @@
 | TRAP-14 | K01 两个查验号 | 后写覆盖 | 全组隔离 | `app/modules/intake/service.py` | `tests/test_intake.py::test_conflicting_packet` |
 | TRAP-19 | F03 在 X9 无槽位及门温证据 | 时间重复计到多个缺证类型 | 先按槽位定义，再判门温 | `app/modules/exposure/service.py` | `tests/test_exposure.py::test_priority_keeps_gaps_mutually_exclusive` |
 | TRAP-23 | A2 改门恰逢 08:40 | 归到两个门区 | 左闭右开版本 | `app/modules/registry/versions.py` | `tests/test_registry.py::test_adjacent_versions` |
+| TRAP-27 | 一票五件只走两件，整批出库清光五件 | 下一批撞上还在的三件 | 按实走件结清，余件留原位保查验 | `app/modules/custody/transitions.py` `app/modules/capacity/ledger.py` | `tests/test_split.py::test_split_out_settles_only_shipped_pieces` |
+| TRAP-28 | 拆批让同一段超温算成两份 | 拆批前后重复计超温 | 按生效时刻切段，实走件只认领此前时段 | `app/modules/exposure/attribution.py` | `tests/test_split.py::test_split_attribution_splits_single_warm_window_at_effective_time` |
+| TRAP-29 | 重跑同一张拆批单重复扣件 | 每跑一次扣一次 | 事件去重 + 生效时刻确定性复算 | `app/modules/intake/service.py` `app/modules/custody/service.py` | `tests/test_split.py::test_rerunning_same_split_does_not_deduct_twice` |
+| TRAP-30 | 迟到的拆批记录紧随先到的调位 | 按收件顺序误结余件 | 按生效时刻回放，收件仅标迟到 | `app/modules/custody/service.py` | `tests/test_split.py::test_late_split_is_replayed_at_effective_time` |
 
 ## 勾稽与范围
 
-收盘 27 件 = 4 普通占用 + 4 查验冻结 + 19 空余。230 货批分钟 = 135 闭门 + 30 超限 + 43 温度合格 + 7 缺温 + 15 缺槽位。固定门区阈值，货批整批搬移，窗口最长七天。
+收盘 27 件 = 4 普通占用 + 4 查验冻结 + 19 空余。230 货批分钟 = 135 闭门 + 30 超限 + 43 温度合格 + 7 缺温 + 15 缺槽位。固定门区阈值，货批整批搬移；拆批出库时按实走件结清、余件留原位。窗口最长七天。

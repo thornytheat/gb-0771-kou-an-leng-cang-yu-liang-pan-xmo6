@@ -1,12 +1,13 @@
 from collections import Counter
 from app.modules.registry.versions import at
+from .attribution import attribute
 from .doors import signals
 from .temperature import normalize
 
 KINDS = ('closed', 'warm', 'cooled', 'missing_temp', 'missing_slot', 'missing_door')
 
 
-def exposure(periods, registry, doors, temperatures):
+def exposure(periods, registry, doors, temperatures, splits=()):
     doors, door_isolation = signals(doors)
     temps, temp_isolation = normalize(temperatures)
     rows = []
@@ -15,8 +16,10 @@ def exposure(periods, registry, doors, temperatures):
     totals = Counter({key: 0 for key in KINDS})
     for row in rows:
         totals[row['kind']] += row['seconds']
+    split_rows, split_totals = attribute(rows, splits)
     return dict(rows=rows, doors=doors, temperatures=temps, isolated=door_isolation + temp_isolation,
-                counts=dict(totals), total_seconds=sum(totals.values()))
+                counts=dict(totals), total_seconds=sum(totals.values()),
+                splits=split_rows, split_totals=split_totals)
 
 
 def slice_period(period, versions, doors, temps):

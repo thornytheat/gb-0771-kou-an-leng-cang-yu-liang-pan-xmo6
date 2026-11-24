@@ -1,12 +1,12 @@
 from collections import defaultdict
-from .contracts import COLUMNS, normalize
+from .contracts import COLUMNS, OPTIONAL, normalize
 from .csv_rows import rows
 
 
 def intake(files):
     accepted, isolation, metrics, copies = {}, [], {}, []
     for source, fields in COLUMNS.items():
-        parsed, rejected, counts = rows(files[source], fields, source)
+        parsed, rejected, counts = rows(files[source], fields, source, OPTIONAL.get(source, ()))
         valid, by_event, repeated = [], defaultdict(list), []
         for row in parsed:
             reason = normalize(row)
@@ -17,7 +17,9 @@ def intake(files):
             else:
                 valid.append(row)
         for group in by_event.values():
-            signatures = {(r['lot'], r['kind'], r['slot'], r['ticket'], r['time']) for r in group}
+            # 拆批件数是去向的一部分：同号两张单件数不同时不得悄悄取先到那张。
+            signatures = {(r['lot'], r['kind'], r['slot'], r['ticket'], r['time'], r.get('shipped'))
+                          for r in group}
             if len(signatures) > 1:
                 rejected.extend(dict(row, code='EVENT_CONFLICT') for row in group)
             else:
